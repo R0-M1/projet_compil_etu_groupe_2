@@ -179,9 +179,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     @Override
     public Type visitMain(grammarTCLParser.MainContext ctx) {
         // TODO Auto-generated method stub
-        //visit(ctx.children);
-        throw new UnsupportedOperationException("Unimplemented method 'visitMain'");
-    }
+        System.out.println("Visite de Main");
 
-    
+        // Parcourt les déclarations de fonctions
+        for (var declFct : ctx.decl_fct()) {
+            System.out.println("Visite de la déclaration de fonction : " + declFct.getText());
+            visit(declFct);
+        }
+
+        // Visite le cœur de la fonction principale
+        if (ctx.core_fct() != null) {
+            System.out.println("Visite du corps de la fonction principale (core_fct)");
+            visit(ctx.core_fct());
+        }
+        return null;
+    }
 }
