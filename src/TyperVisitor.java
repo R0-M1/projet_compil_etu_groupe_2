@@ -179,6 +179,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     @Override
     public Type visitMain(grammarTCLParser.MainContext ctx) {
         // TODO Auto-generated method stub
+        //visit(ctx.children);
         throw new UnsupportedOperationException("Unimplemented method 'visitMain'");
     }
 
