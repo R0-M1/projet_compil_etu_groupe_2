@@ -785,53 +785,43 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         System.out.println("Visite assignement");
 
         String variableName = ctx.VAR().getText();
-        ParseTree variable = ctx.getChild(0);
-        String getChildTest = ctx.getChild(0).getText();
-
-        System.out.println("Test get child text : " + getChildTest);
-
-        // Recherche de la variable dans tous les scopes
+        // Extrait le type déclaré pour la variable (membre gauche)
         Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
-
-        // Si la variable n'est pas déclarée
         if (foundEntry == null) {
             throw new IllegalArgumentException("Variable non déclarée : " + variableName);
         }
-
         UnknownType declaredKey = foundEntry.getKey();
         Type declaredType = foundEntry.getValue();
 
-        // Vérifie le type de l'expression assignée
+        // Vérifie le type de l'expression assignée (membre droit)
         grammarTCLParser.ExprContext rightExpr = ctx.expr(0);
         Type rightType = visit(rightExpr);
-        String rightVariableName = rightExpr.getText(); // Nom de la variable ou expression à droite
 
-        System.out.println("Type de l'expression assignée : " + rightType);
-        System.out.println("Membre gauche (clé UnknownType) : " + declaredKey);
-        System.out.println("Membre gauche (type déclaré) : " + declaredType);
-        System.out.println("Type de l'expression assignée a droite : " + rightType);
-
-
-        // Utilisation de linkUnknownTypes pour établir un lien entre les deux UnknownType si applicable
-        linkUnknownTypes(declaredKey, declaredType, rightVariableName, rightType);
-
-        Map<UnknownType, Type> unification;
-
-        if ((declaredType instanceof ArrayType && !(rightType instanceof ArrayType)) ||
-                (!(declaredType instanceof ArrayType) && rightType instanceof ArrayType)) {
-            throw new IllegalArgumentException("Incompatible types: Cannot assign an array to a primitive type or vice versa.");
+        // Si les deux types sont connus (pas UnknownType) et différents => erreur
+        if (!(declaredType instanceof UnknownType) && !(rightType instanceof UnknownType)) {
+            if (!declaredType.equals(rightType)) {
+                throw new IllegalArgumentException(
+                        "Type mismatch: " + declaredType + " != " + rightType
+                );
+            }
         }
 
-        unification = declaredKey.unify(rightType);
+        // Logique d’unification ou de liaison pour les UnknownType
+        linkUnknownTypes(declaredKey, declaredType, rightExpr.getText(), rightType);
 
-        // Si une unification est nécessaire
+        // Vérifie la compatibilité tableau vs. primitif
+        if ((declaredType instanceof ArrayType && !(rightType instanceof ArrayType)) ||
+                (!(declaredType instanceof ArrayType) && rightType instanceof ArrayType)) {
+            throw new IllegalArgumentException(
+                    "Incompatible types: Cannot assign an array to a primitive type or vice versa."
+            );
+        }
+
+        // Unifie si le type de gauche ou de droite est UnknownType
+        Map<UnknownType, Type> unification = declaredKey.unify(rightType);
         if (!unification.isEmpty()) {
-            System.out.println("HashMap d'unification : " + unification);
-            System.out.println("declaredKey : " + declaredKey);
-            // Applique les substitutions dans le scope de déclaration uniquement
             for (Map.Entry<UnknownType, Type> substitution : unification.entrySet()) {
-                Type updatedType = substitution.getValue();
-                propagateType(substitution.getKey(), updatedType); // Propage à toutes les variables liées
+                propagateType(substitution.getKey(), substitution.getValue());
             }
         }
 
