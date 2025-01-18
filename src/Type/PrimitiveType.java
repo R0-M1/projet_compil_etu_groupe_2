@@ -2,8 +2,8 @@ package Type;
 import java.util.Map;
 
 public  class PrimitiveType extends Type {
-    private Type.Base type; 
-    
+    private Type.Base type;
+
     /**
      * Constructeur
      * @param type type de base
@@ -22,8 +22,18 @@ public  class PrimitiveType extends Type {
 
     @Override
     public Map<UnknownType, Type> unify(Type t) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'unify'");
+        // Si `t` est un PrimitiveType et son type est égal à celui-ci
+        if (t instanceof PrimitiveType && this.equals(t)) {
+            return Map.of();
+        }
+
+        // Si `t` est un UnknownType, déléguer l'unification à l'UnknownType
+        if (t instanceof UnknownType) {
+            return t.unify(this); // Appelle unify sur l'UnknownType
+        }
+
+        // Si le type est incompatible, l'unification échoue
+        throw new IllegalArgumentException("Unification échouée : incompatible entre " + this + " et " + t);
     }
 
     @Override
@@ -34,20 +44,34 @@ public  class PrimitiveType extends Type {
 
     @Override
     public boolean contains(UnknownType v) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'contains'");
+        // Les types primitifs ne contiennent jamais d'UnknownType
+        return false;
     }
 
     @Override
-    public boolean equals(Object t) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'equals'");
+    public boolean equals(Object obj) {
+        // Vérifie si c'est la même instance
+        if (this == obj) {
+            return true;
+        }
+
+        // Vérifie si l'objet est une instance de PrimitiveType
+        if (obj instanceof PrimitiveType) {
+            PrimitiveType other = (PrimitiveType) obj;
+
+            // Compare les types de base
+            return this.type == other.type;
+        }
+
+        // Si ce n'est pas un PrimitiveType, retourne false
+        return false;
     }
+
 
     @Override
     public String toString() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'toString'");
+        return type.name().toLowerCase();
     }
+
 
 }
