@@ -1,0 +1,16 @@
+int main() {
+    int w = 10;
+    int x = 6;
+    int y = 5;
+    int a = 0;
+    int b = 0;
+
+    bool z = true;
+    bool c;
+
+    z = x * w;        // Multiplication
+    b = -y;           // Opposite
+    c = !z;           // Négation logique
+
+    return y;
+}

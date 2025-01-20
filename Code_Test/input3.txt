@@ -1,0 +1,15 @@
+int main() {
+    int x = 10;
+    int y = 6;
+    int z = 0;
+
+    if (y < x) {
+        y = y + 1;
+    } else {
+        y = y + 2;
+    }
+
+    z = (x * y) + x;
+
+    return y;
+}

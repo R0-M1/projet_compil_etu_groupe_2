@@ -1,0 +1,29 @@
+int main() {
+    int x = 10;
+    int y = 6;
+    bool z = true;
+    bool a = false;
+    bool b;
+    bool c;
+
+    if (y < x) {
+        y = y + 1;
+    }
+
+    if (z == true) {
+        y = y + 1;
+    }
+
+    while (y < x) {
+        y = y + 1;
+    }
+
+    for (int i = 0; y < x; i = i + 1) {
+        y = y + 1;
+    }
+
+    b = z && a;
+    c = z || a;
+
+    return y;
+}
