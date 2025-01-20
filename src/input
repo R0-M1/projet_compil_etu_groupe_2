@@ -1,5 +1,10 @@
+auto f(bool x) {
+    int z = 1;
+    return z;
+}
+
 int main() {
-    int[] x = {1, 5, 3};
-    int y = x[1];
+    int y;
+    y = f(true);
     return y;
 }

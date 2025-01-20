@@ -9,6 +9,7 @@ import Type.UnknownType;
 import Type.PrimitiveType;
 import Type.FunctionType;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 
 public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements grammarTCLVisitor<Type> {
@@ -782,7 +783,20 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
     @Override
     public Type visitAssignment(grammarTCLParser.AssignmentContext ctx) {
+        if(ctx.expr(1)!=null){
+            System.out.println("test");
+        }
         System.out.println("Visite assignement");
+
+
+        TerminalNode test2 = ctx.VAR();
+        TerminalNode test3 = ctx.ASSIGN();
+
+        List<grammarTCLParser.ExprContext> test = ctx.expr();
+
+
+
+
 
         String variableName = ctx.VAR().getText();
         // Extrait le type déclaré pour la variable (membre gauche)
@@ -958,6 +972,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             System.out.println("Visite de l'expression de retour : " + ctx.expr().getText());
 
             // Récupère le type de retour
+            grammarTCLParser.ExprContext test = ctx.expr();
             Type returnType = visit(ctx.expr());
 
             // Ajoute le typeScope actuel à l'archive
@@ -987,19 +1002,23 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         System.out.println("Nom de la fonction : " + functionName);
 
         // Analyse des paramètres
-        ArrayList<Type> parametres = new ArrayList<>();
+        ArrayList<Type> parametersType = new ArrayList<>();
+
         if (ctx.type().size() > 1) {
             for (int i = 1; i < ctx.type().size(); i++) {
-                parametres.add(visit(ctx.type(i)));
+                parametersType.add(visit(ctx.type(i)));
             }
         }
-        FunctionType functionType = new FunctionType(returnType, parametres);
+
+        FunctionType functionType = new FunctionType(returnType, parametersType);
+
 
         // Vérifie si la fonction existe déjà dans le scope actuel
         Map<UnknownType, Type> currentScope = typeScopes.peek();
         if (FunctionExistsInCurrentScope(functionName, currentScope)) {
             throw new UnsupportedOperationException("La fonction " + functionName + " est déjà déclarée.");
         }
+
 
         // Ajoute la fonction au scope global
         UnknownType functionKey = new UnknownType(ctx.VAR(0));
@@ -1009,9 +1028,24 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         typeScopes.push(new HashMap<>());
         System.out.println("Entrée dans le scope local de la fonction : " + functionName);
 
+        for(int i=1; i<ctx.type().size(); i++){
+            grammarTCLParser.InstrContext test = new grammarTCLParser.InstrContext();
+            grammarTCLParser.DeclarationContext declarationCtx = new grammarTCLParser.DeclarationContext(test);
+            declarationCtx.children = new ArrayList<>(); // Initialise manuellement les enfants
+            declarationCtx.addChild(ctx.type(i));
+            declarationCtx.addChild(ctx.VAR(i));
+
+            visitDeclaration(declarationCtx);
+        }
+
+
+
+
         // Visite du core de la fonction
         Type coreReturnType = visit(ctx.core_fct());
 
+
+        returnType.unify(coreReturnType);
         // Vérification du type de retour
         if (!coreReturnType.equals(returnType)) {
             throw new IllegalArgumentException(
