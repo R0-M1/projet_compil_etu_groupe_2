@@ -1,4 +1,4 @@
-// Generated from grammarTCL.g4 by ANTLR 4.13.1
+// Generated from grammarTCL.g4 by ANTLR 4.13.2
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;
 
-@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue"})
+@SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue", "this-escape"})
 public class grammarTCLParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.13.1", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.13.2", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -119,14 +119,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public NegationContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterNegation(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitNegation(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitNegation(this);
 			else return visitor.visitChildren(this);
@@ -147,14 +139,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode INFEQ() { return getToken(grammarTCLParser.INFEQ, 0); }
 		public ComparisonContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterComparison(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitComparison(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitComparison(this);
 			else return visitor.visitChildren(this);
@@ -171,14 +155,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode OR() { return getToken(grammarTCLParser.OR, 0); }
 		public OrContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterOr(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitOr(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitOr(this);
 			else return visitor.visitChildren(this);
@@ -192,14 +168,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public OppositeContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterOpposite(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitOpposite(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitOpposite(this);
 			else return visitor.visitChildren(this);
@@ -209,14 +177,6 @@ public class grammarTCLParser extends Parser {
 	public static class IntegerContext extends ExprContext {
 		public TerminalNode INT() { return getToken(grammarTCLParser.INT, 0); }
 		public IntegerContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterInteger(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitInteger(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitInteger(this);
@@ -233,14 +193,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public Tab_accessContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterTab_access(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitTab_access(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitTab_access(this);
 			else return visitor.visitChildren(this);
@@ -252,14 +204,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(ExprContext.class,0);
 		}
 		public BracketsContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterBrackets(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitBrackets(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitBrackets(this);
@@ -277,14 +221,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public CallContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterCall(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitCall(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitCall(this);
 			else return visitor.visitChildren(this);
@@ -294,14 +230,6 @@ public class grammarTCLParser extends Parser {
 	public static class BooleanContext extends ExprContext {
 		public TerminalNode BOOL() { return getToken(grammarTCLParser.BOOL, 0); }
 		public BooleanContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterBoolean(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitBoolean(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitBoolean(this);
@@ -319,14 +247,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode AND() { return getToken(grammarTCLParser.AND, 0); }
 		public AndContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterAnd(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitAnd(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitAnd(this);
 			else return visitor.visitChildren(this);
@@ -336,14 +256,6 @@ public class grammarTCLParser extends Parser {
 	public static class VariableContext extends ExprContext {
 		public TerminalNode VAR() { return getToken(grammarTCLParser.VAR, 0); }
 		public VariableContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterVariable(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitVariable(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitVariable(this);
@@ -364,14 +276,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode MODULO() { return getToken(grammarTCLParser.MODULO, 0); }
 		public MultiplicationContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterMultiplication(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitMultiplication(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitMultiplication(this);
 			else return visitor.visitChildren(this);
@@ -390,14 +294,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode DIFF() { return getToken(grammarTCLParser.DIFF, 0); }
 		public EqualityContext(ExprContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterEquality(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitEquality(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitEquality(this);
 			else return visitor.visitChildren(this);
@@ -412,14 +308,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(ExprContext.class,i);
 		}
 		public Tab_initializationContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterTab_initialization(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitTab_initialization(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitTab_initialization(this);
@@ -438,14 +326,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode ADD() { return getToken(grammarTCLParser.ADD, 0); }
 		public TerminalNode SUB() { return getToken(grammarTCLParser.SUB, 0); }
 		public AdditionContext(ExprContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterAddition(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitAddition(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitAddition(this);
@@ -783,14 +663,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode BASE_TYPE() { return getToken(grammarTCLParser.BASE_TYPE, 0); }
 		public Base_typeContext(TypeContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterBase_type(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitBase_type(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitBase_type(this);
 			else return visitor.visitChildren(this);
@@ -802,14 +674,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(TypeContext.class,0);
 		}
 		public Tab_typeContext(TypeContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterTab_type(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitTab_type(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitTab_type(this);
@@ -897,14 +761,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode SEMICOL() { return getToken(grammarTCLParser.SEMICOL, 0); }
 		public PrintContext(InstrContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterPrint(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitPrint(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitPrint(this);
 			else return visitor.visitChildren(this);
@@ -922,14 +778,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public TerminalNode SEMICOL() { return getToken(grammarTCLParser.SEMICOL, 0); }
 		public AssignmentContext(InstrContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterAssignment(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitAssignment(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitAssignment(this);
@@ -950,14 +798,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public ForContext(InstrContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterFor(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitFor(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitFor(this);
 			else return visitor.visitChildren(this);
@@ -972,14 +812,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(InstrContext.class,i);
 		}
 		public BlockContext(InstrContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterBlock(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitBlock(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitBlock(this);
@@ -996,14 +828,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(InstrContext.class,0);
 		}
 		public WhileContext(InstrContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterWhile(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitWhile(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitWhile(this);
@@ -1022,14 +846,6 @@ public class grammarTCLParser extends Parser {
 			return getRuleContext(ExprContext.class,0);
 		}
 		public DeclarationContext(InstrContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterDeclaration(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitDeclaration(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitDeclaration(this);
@@ -1051,14 +867,6 @@ public class grammarTCLParser extends Parser {
 		public TerminalNode ELSE() { return getToken(grammarTCLParser.ELSE, 0); }
 		public IfContext(InstrContext ctx) { copyFrom(ctx); }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterIf(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitIf(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitIf(this);
 			else return visitor.visitChildren(this);
@@ -1072,14 +880,6 @@ public class grammarTCLParser extends Parser {
 		}
 		public TerminalNode SEMICOL() { return getToken(grammarTCLParser.SEMICOL, 0); }
 		public ReturnContext(InstrContext ctx) { copyFrom(ctx); }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterReturn(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitReturn(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitReturn(this);
@@ -1304,14 +1104,6 @@ public class grammarTCLParser extends Parser {
 		}
 		@Override public int getRuleIndex() { return RULE_core_fct; }
 		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterCore_fct(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitCore_fct(this);
-		}
-		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitCore_fct(this);
 			else return visitor.visitChildren(this);
@@ -1383,14 +1175,6 @@ public class grammarTCLParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_decl_fct; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterDecl_fct(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitDecl_fct(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitDecl_fct(this);
@@ -1474,14 +1258,6 @@ public class grammarTCLParser extends Parser {
 			super(parent, invokingState);
 		}
 		@Override public int getRuleIndex() { return RULE_main; }
-		@Override
-		public void enterRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).enterMain(this);
-		}
-		@Override
-		public void exitRule(ParseTreeListener listener) {
-			if ( listener instanceof grammarTCLListener ) ((grammarTCLListener)listener).exitMain(this);
-		}
 		@Override
 		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
 			if ( visitor instanceof grammarTCLVisitor ) return ((grammarTCLVisitor<? extends T>)visitor).visitMain(this);

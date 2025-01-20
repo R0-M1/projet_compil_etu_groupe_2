@@ -53,6 +53,7 @@ public class FunctionType extends Type {
 
     @Override
     public Map<UnknownType, Type> unify(Type t) {
+        // Vérifie si `t` est un FunctionType
         if (!(t instanceof FunctionType)) {
             throw new IllegalArgumentException("Unification échouée : incompatible entre FunctionType et " + t);
         }
@@ -60,30 +61,29 @@ public class FunctionType extends Type {
         FunctionType other = (FunctionType) t;
         Map<UnknownType, Type> substitutions = new java.util.HashMap<>();
 
-        // Vérification du nombre d'arguments
+        // Vérifie que le nombre d'arguments est identique
         if (this.getNbArgs() != other.getNbArgs()) {
             throw new IllegalArgumentException("Unification échouée : le nombre d'arguments est différent.");
         }
 
-        // Unification des paramètres
+        // Unifie les types des arguments
         for (int i = 0; i < this.getNbArgs(); i++) {
             Map<UnknownType, Type> argSubstitutions = this.getArgsType(i).unify(other.getArgsType(i));
+            if (argSubstitutions == null) {
+                throw new IllegalArgumentException("Unification échouée : les arguments " + i + " ne peuvent pas être unifiés.");
+            }
             substitutions.putAll(argSubstitutions);
         }
 
-        // Unification du retour
+        // Unifie les types de retour
         Map<UnknownType, Type> returnSubstitutions = this.returnType.unify(other.returnType);
-        substitutions.putAll(returnSubstitutions);
-
-        // Application des substitutions pour mettre à jour immédiatement
-        this.returnType = this.returnType.substituteAll(substitutions);
-        for (int i = 0; i < argsTypes.size(); i++) {
-            argsTypes.set(i, argsTypes.get(i).substituteAll(substitutions));
+        if (returnSubstitutions == null) {
+            throw new IllegalArgumentException("Unification échouée : les types de retour sont incompatibles.");
         }
+        substitutions.putAll(returnSubstitutions);
 
         return substitutions;
     }
-
 
 
     @Override

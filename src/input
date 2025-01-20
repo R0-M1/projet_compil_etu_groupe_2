@@ -1,11 +1,10 @@
-auto f(int[] x) {
-    return x[1];
-}
-
 int main() {
-    int y;
-    int[] test = {1,2};
-    int a = test[1];
-    y = f({1,2});
-    return y;
+    int x = 10;
+    int y = 6;
+    bool z = true;
+    bool a = false;
+    bool b;
+    bool c;
+
+    return x + y;
 }

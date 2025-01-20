@@ -11,22 +11,53 @@ import Type.FunctionType;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-
+/**
+ * Cette classe est un visiteur qui sert à analyser et déterminer les types
+ * des expressions et variables dans un programme TCL.
+ * <p>
+ * Elle hérite de {@link AbstractParseTreeVisitor} et implémente {@link grammarTCLVisitor},
+ * pour parcourir l'arbre généré par ANTLR et vérifier (ou inférer) les types.
+ */
 public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements grammarTCLVisitor<Type> {
-
+    /**
+     * Map global reliant des UnknownType à des Type concrets.
+     */
     private Map<UnknownType,Type> types = new HashMap<UnknownType,Type>();
 
+    /**
+     * Pile représentant les différents “scopes” (blocs) avec leurs variables.
+     * Chaque élément de la pile est un Map associant un UnknownType à un Type.
+     */
     private Stack<Map<UnknownType, Type>> typeScopes = new Stack<>();
+
+    /**
+     * Pile archivant les anciens scopes une fois qu'on en est sortis.
+     * Utile pour garder un historique des déclarations.
+     */
     private Stack<Map<UnknownType, Type>> archivedScopes = new Stack<>();
-    // HashMap supplémentaire pour conserver les relations entre UnknownType
+
+    /**
+     * Map interne qui relie deux UnknownType pour exprimer qu'ils sont équivalents
+     * (ou doivent le devenir lors de la résolution des types).
+     */
     private Map<UnknownType, UnknownType> autoLinkMap = new HashMap<>();
 
-
+    /**
+     * Constructeur par défaut.
+     * Il crée un premier scope global, ainsi qu'un scope archivé global.
+     */
     public TyperVisitor() {
         typeScopes.push(new HashMap<>()); // Scope global
         archivedScopes.push(new HashMap<>()); // Scope global
     }
 
+    /**
+     * Trouve la racine représentative d'un UnknownType dans le autoLinkMap.
+     * Cela permet de gérer l'équivalence entre plusieurs UnknownType.
+     *
+     * @param type l'UnknownType à explorer
+     * @return la racine de l'UnknownType (lui-même ou une autre instance)
+     */
     private UnknownType find(UnknownType type) {
         if (!autoLinkMap.containsKey(type)) {
             return type; // Si aucun lien, retourne lui-même (racine de son propre groupe)
@@ -38,27 +69,34 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     }
 
 
-    // Fonction pour relier deux `UnknownType`
+    /**
+     * Relie deux UnknownType entre eux dans le autoLinkMap en déclarant qu'ils sont équivalents.
+     *
+     * @param type1 premier UnknownType
+     * @param type2 second UnknownType
+     */
     private void union(UnknownType type1, UnknownType type2) {
         UnknownType root1 = find(type1);
         UnknownType root2 = find(type2);
         if (!root1.equals(root2)) {
             autoLinkMap.put(root1, root2); // Relie le premier représentant au second
-            System.out.println("Union entre " + root1 + " et " + root2);
+
         }
     }
+
     /**
-     * Établit un lien entre deux `UnknownType` si les deux sont effectivement des `UnknownType`.
+     * Établit un lien entre deux UnknownType si les deux sont effectivement des UnknownType.
+     * Utile pour gérer les cas où on assigne un UnknownType à un autre.
      *
-     * @param declaredKey   Le `UnknownType` du côté gauche de l'opération.
-     * @param declaredType  Le type déclaré correspondant au `declaredKey`.
-     * @param rightVariableName Le nom de la variable ou expression à droite de l'opération.
-     * @param rightType     Le type de l'expression ou variable à droite.
+     * @param declaredKey         clé (UnknownType) du côté gauche de l'opération
+     * @param declaredType        type concret (ou UnknownType) du côté gauche
+     * @param rightVariableName   nom de la variable ou expression à droite
+     * @param rightType           type concret (ou UnknownType) du côté droit
      */
     private void linkUnknownTypes(UnknownType declaredKey, Type declaredType, String rightVariableName, Type rightType) {
         // Vérifie que les deux types sont des UnknownType
         if (declaredType instanceof UnknownType && rightType instanceof UnknownType) {
-            System.out.println("Tentative de liaison entre deux UnknownType.");
+
 
             // Recherche de la clé de la variable à droite dans les scopes
             Map.Entry<UnknownType, Type> foundRightEntry = existsInAllScopes(rightVariableName);
@@ -67,17 +105,24 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             }
 
             UnknownType rightKey = foundRightEntry.getKey();
-            System.out.println("Établissement d'une relation entre " + declaredKey + " et " + rightKey);
+
 
             // Établit la relation via union
             union(declaredKey, rightKey);
         }
     }
 
+    /**
+     * Propage un type concret à tous les UnknownType qui sont liés
+     * (donc qui partagent la même racine dans autoLinkMap).
+     *
+     * @param type     l'UnknownType qu'on veut substituer
+     * @param realType le type réel qui va remplacer
+     */
     private void propagateType(UnknownType type, Type realType) {
         // Trouve la racine canonique
         UnknownType root = find(type);
-        System.out.println("Propagating type for root: " + root + " -> " + realType);
+
 
         // Mise à jour dans tous les scopes ET dans la table de types globale
         for (Map.Entry<UnknownType, Type> entry : types.entrySet()) {
@@ -99,39 +144,41 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         applySubstitutionToScope(root, realType);
         types.put(root, realType);
 
-        System.out.println("Final propagation complete.");
+
     }
 
     /**
-     * Unifie un UnknownType avec le type INT et propage les changements dans tous les scopes.
+     * Force la variable donnée à devenir un type INT, si c'est un UnknownType.
+     * Propage ensuite cette information dans tous les scopes.
      *
-     * @param variableName Nom de la variable à unifier.
-     * @param variableType Type actuel de la variable.
+     * @param variableName nom de la variable à unifier
+     * @param variableType type actuel de la variable
      */
     private void unifyToInt(String variableName, Type variableType) {
         if (variableType instanceof UnknownType) {
-            System.out.println("Unify to int called for " + variableName);
+
             Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
             if (foundEntry == null) {
                 throw new IllegalArgumentException("Variable non déclarée : " + variableName);
             }
 
             UnknownType key = foundEntry.getKey();
-            System.out.println("Unification forcée de " + key + " avec INT.");
+
             propagateType(key, new PrimitiveType(Type.Base.INT));
         }
     }
 
     /**
-     * Unifie un UnknownType avec le type BOOL et propage les changements dans tous les scopes.
+     * Force la variable donnée à devenir un type BOOL, si c'est un UnknownType.
+     * Propage ensuite cette information dans tous les scopes.
      *
-     * @param variableName Nom de la variable à unifier.
-     * @param variableType Type actuel de la variable.
+     * @param variableName nom de la variable à unifier
+     * @param variableType type actuel de la variable
      */
     private void unifyToBool(String variableName, Type variableType) {
         // Vérifie si le type est un UnknownType
         if (variableType instanceof UnknownType) {
-            System.out.println("Unify to bool called for " + variableName);
+
 
             // Recherche la clé de la variable dans tous les scopes
             Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
@@ -140,11 +187,11 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             }
 
             UnknownType key = foundEntry.getKey();
-            System.out.println("Unification de " + variableName + " (clé : " + key + ") avec BOOL.");
+
 
             // Effectue l'unification avec BOOL
             Map<UnknownType, Type> unification = key.unify(new PrimitiveType(Type.Base.BOOL));
-            System.out.println("Résultat de l'unification : " + unification);
+
 
             // Propage les changements
             for (Map.Entry<UnknownType, Type> entry : unification.entrySet()) {
@@ -153,18 +200,34 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         }
     }
 
-
+    /**
+     * @return la pile des scopes (du plus local au global)
+     */
     public Stack<Map<UnknownType, Type>> getTypeScopes() {
         return typeScopes;
     }
+
+    /**
+     * @return la pile des scopes archivés (scopes fermés)
+     */
     public Stack<Map<UnknownType, Type>> getarchivedScopes() {
         return archivedScopes;
     }
 
+    /**
+     * @return la Map globale des UnknownType et leur Type associé
+     */
     public Map<UnknownType, Type> getTypes() {
         return types;
     }
 
+    /**
+     * Vérifie si une variable avec un certain nom existe déjà dans le scope donné.
+     *
+     * @param variableName nom de la variable à chercher
+     * @param currentScope scope dans lequel on cherche
+     * @return true si la variable est trouvée, sinon false
+     */
     private boolean VarExistsInCurrentScope(String variableName, Map<UnknownType, Type> currentScope) {
         for (UnknownType key : currentScope.keySet()) {
             if (key.getVarName().equals(variableName)) {
@@ -173,6 +236,14 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         }
         return false; // La variable n'existe pas dans le scope courant
     }
+
+    /**
+     * Vérifie si une fonction avec un certain nom existe déjà dans le scope donné.
+     *
+     * @param functionName nom de la fonction à chercher
+     * @param currentScope scope dans lequel on cherche
+     * @return true si la fonction est trouvée, sinon false
+     */
     private boolean FunctionExistsInCurrentScope(String functionName, Map<UnknownType, Type> currentScope) {
         for (Map.Entry<UnknownType, Type> entry : currentScope.entrySet()) {
             UnknownType key = entry.getKey();
@@ -186,7 +257,12 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return false; // La fonction n'existe pas dans le scope courant
     }
 
-
+    /**
+     * Vérifie si une variable existe déjà dans un scope parent (pas le scope courant, mais ceux au-dessus).
+     *
+     * @param variableName nom de la variable à chercher
+     * @return true si la variable est trouvée, sinon false
+     */
     private boolean VarExistsInParentScopes(String variableName) {
         for (int i = typeScopes.size() - 2; i >= 0; i--) { // Parcourt les scopes parents
             Map<UnknownType, Type> parentScope = typeScopes.get(i);
@@ -199,6 +275,12 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return false; // La variable n'existe pas dans les scopes parents
     }
 
+    /**
+     * Vérifie si une fonction existe déjà dans un scope parent (pas le scope courant, mais ceux au-dessus).
+     *
+     * @param functionName nom de la fonction à chercher
+     * @return true si la fonction est trouvée, sinon false
+     */
     private boolean FunctionExistsInParentScopes(String functionName) {
         // Iterate through parent scopes from the second-to-last to the root
         for (int i = typeScopes.size() - 2; i >= 0; i--) {
@@ -212,6 +294,14 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         }
         return false; // The function does not exist in the parent scopes
     }
+
+    /**
+     * Recherche dans tous les scopes (du plus local au global) le FunctionType associé
+     * à la fonction demandée.
+     *
+     * @param functionName nom de la fonction
+     * @return le FunctionType si trouvé, sinon null
+     */
     private FunctionType findFunctionType(String functionName) {
         // Check the current scope
         Map<UnknownType, Type> currentScope = typeScopes.peek();
@@ -236,9 +326,11 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     }
 
     /**
-     * Applique les substitutions dans le scope où la variable a été déclarée.
-     * @param declaredKey La clé représentant la variable (UnknownType).
-     * @param updatedType Le type unifié à appliquer.
+     * Applique une substitution (mise à jour d'un UnknownType) dans le scope où
+     * la variable a été déclarée.
+     *
+     * @param declaredKey la clé (UnknownType)
+     * @param updatedType le nouveau type
      */
     private void applySubstitutionToScope(UnknownType declaredKey, Type updatedType) {
         // Parcourt les scopes du plus proche au plus éloigné
@@ -247,14 +339,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
             // Si la variable est déclarée dans ce scope, applique la substitution
             if (scope.containsKey(declaredKey)) {
-                System.out.println("Substitution appliquée dans le scope " + i + " : " +
-                        declaredKey + " -> " + updatedType);
                 scope.put(declaredKey, updatedType);
                 break; // Arrête la recherche après avoir trouvé le scope de déclaration
             }
         }
     }
 
+    /**
+     * Cherche une variable dans tous les scopes par son nom.
+     *
+     * @param variableName nom de la variable
+     * @return l'entrée Map.Entry avec la clé UnknownType et sa valeur Type,
+     *         ou null si non trouvée
+     */
     private Map.Entry<UnknownType, Type> existsInAllScopes(String variableName) {
         // Parcourt les scopes de la pile, du bloc courant au global
         for (int i = typeScopes.size() - 1; i >= 0; i--) {
@@ -268,15 +365,26 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return null; // Retourne null si la variable n'est pas trouvée
     }
 
+    /**
+     * Ajoute une nouvelle variable au scope courant.
+     *
+     * @param variable     la clé (UnknownType)
+     * @param declaredType le type déclaré
+     * @param currentScope le scope dans lequel on ajoute la variable
+     */
     private void addVariableToScope(UnknownType variable, Type declaredType, Map<UnknownType, Type> currentScope) {
         // Ajoute la variable au scope courant
         currentScope.put(variable, declaredType);
-        System.out.println("Ajout à la table des types dans le scope courant : " + variable + " -> " + declaredType);
+
     }
 
 
+    /**
+     * Affiche dans la console le contenu des archives de scopes,
+     * pour information ou debug.
+     */
     public void printArchivedScopes() {
-        System.out.println("Archives des scopes :");
+
         for (int i = archivedScopes.size() - 1; i >= 0; i--) {
             System.out.println("Scope archivé niveau " + (archivedScopes.size() - i) + ":");
             Map<UnknownType, Type> scope = archivedScopes.get(i);
@@ -287,13 +395,17 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     }
 
 
+    /**
+     * Vérifie que l'expression visitée est un bool,
+     * sinon lève une exception.
+     */
     @Override
     public Type visitNegation(grammarTCLParser.NegationContext ctx) {
-        System.out.println("Visite negation"); // Dans visitNegation, il faut juste que le membre de droite soit un bool
+
         String right_string = ctx.expr().getText(); // soit un bool
-        System.out.println("Déclaration droite : " + right_string);
+
         Type right_type = visit(ctx.expr());
-        System.out.println("type droit trouvée : " + right_type);
+
         unifyToBool(right_string, right_type);
         Map.Entry<UnknownType, Type> RightEntry = existsInAllScopes(right_string);
         if(RightEntry != null){
@@ -306,19 +418,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return bool;
     }
 
+    /**
+     * Vérifie que les deux membres de la comparaison sont des int.
+     * Retourne un bool.
+     */
     @Override
     public Type visitComparison(grammarTCLParser.ComparisonContext ctx) { // on vérifie que le membre de gauche et droite sont des int
-        System.out.println("visitComparison");
+
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
         String left_string = ctx.expr(0).getText();
         String right_string = ctx.expr(1).getText();
 
         // Unifie les types des membres gauche et droit avec INT si nécessaire
-        System.out.println("right_type :  " + right_type);
-        if (right_type instanceof UnknownType) {
-            System.out.println("bool instance de unknownType");
-        }
         unifyToInt(left_string, left_type);
         unifyToInt(right_string, right_type);
 
@@ -342,9 +454,12 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return new PrimitiveType(Type.Base.BOOL);
     }
 
+    /**
+     * Vérifie que les deux membres (gauche et droite) sont des bool, retourne un bool.
+     */
     @Override
     public Type visitOr(grammarTCLParser.OrContext ctx) { // on vérifie que les deux termes de gauche et droite sont des bools donc quasiment comme égalité
-        System.out.println("visitOr");
+
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
         String left_string = ctx.expr(0).getText();
@@ -372,13 +487,17 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return new PrimitiveType(Type.Base.BOOL);
     }
 
+    /**
+     * Vérifie que l'expression est un int (en forçant si c'est un UnknownType).
+     * Retourne un int.
+     */
     @Override
     public Type visitOpposite(grammarTCLParser.OppositeContext ctx) { // comme VisitNegation sauf qu'on veut juste que l'expression soit un entier
-        System.out.println("visitOpposite");
+
         String right_string = ctx.expr().getText(); // soit un bool
-        System.out.println("Déclaration droite : " + right_string);
+
         Type right_type = visit(ctx.expr());
-        System.out.println("type droit trouvée : " + right_type);
+
         unifyToInt(right_string, right_type);
         Map.Entry<UnknownType, Type> RightEntry = existsInAllScopes(right_string);
         if(RightEntry != null){
@@ -391,18 +510,26 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return type_int;
     }
 
+    /**
+     * Retourne toujours un type INT pour un littéral entier.
+     */
     @Override
     public Type visitInteger(grammarTCLParser.IntegerContext ctx) {
         return new PrimitiveType(Type.Base.INT); // Retourne un type INT
     }
 
+    /**
+     * Vérifie l'accès dans un tableau : le premier membre doit être un ArrayType,
+     * le deuxième membre (l'indice) doit être un int.
+     * Retourne le type des éléments du tableau.
+     */
     @Override
     public Type visitTab_access(grammarTCLParser.Tab_accessContext ctx) {
-        System.out.println("visitTabAccess");
+
 
         // Récupération de la variable de gauche (le tableau)
         String left_member = ctx.expr(0).getText();
-        System.out.println("Variable tableau : " + left_member);
+
 
         // Vérification de l'existence de la variable
         Map.Entry<UnknownType, Type> left_entry = existsInAllScopes(left_member);
@@ -419,11 +546,11 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         // Récupération du type des éléments du tableau
         ArrayType arrayType = (ArrayType) left_type;
         Type elementType = arrayType.getTabType();
-        System.out.println("Type des éléments du tableau : " + elementType);
+
 
         // Vérification de l'indice (membre de droite)
         String right_member = ctx.expr(1).getText();
-        System.out.println("Indice : " + right_member);
+
 
         Type right_type = visit(ctx.expr(1));
         Type type_int = new PrimitiveType(Type.Base.INT);
@@ -436,23 +563,29 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     }
 
 
+    /**
+     * Visite d'une expression placée entre parenthèses, retourne le type
+     * de l'expression interne.
+     */
     @Override
     public Type visitBrackets(grammarTCLParser.BracketsContext ctx) {
-        System.out.println("visitBrackets");
-        Type inside_brackets = visit(ctx.expr());
-        return inside_brackets;
+        return visit(ctx.expr());
     }
 
+    /**
+     * Visite l'appel d'une fonction, vérifie la cohérence des types de paramètres
+     * et retourne le type de retour.
+     */
     @Override
     public Type visitCall(grammarTCLParser.CallContext ctx) {
-        System.out.println("visitCall");
+
 
         // Récupération du nom de la fonction
         String functionName = ctx.VAR().getText();
         if (functionName == null) {
             throw new IllegalArgumentException("Function name cannot be null.");
         }
-        System.out.println("Function name: " + functionName);
+
 
         // Recherche du type de la fonction
         FunctionType functionType = findFunctionType(functionName);
@@ -460,19 +593,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new UnsupportedOperationException("Function '" + functionName + "' does not exist in the current or parent scopes");
         }
 
-        System.out.println("Function type: " + functionType);
+
 
         // Récupération du type de retour et des paramètres attendus
         Type returnType = functionType.getReturnType();
         List<Type> expectedParams = functionType.getArgsTypes();
-        System.out.println("Expected parameters: " + expectedParams);
+
 
         // Vérification des paramètres fournis
         List<grammarTCLParser.ExprContext> paramsExpr = ctx.expr();
         if (paramsExpr == null) {
             paramsExpr = new ArrayList<>();
         }
-        System.out.println("Provided parameters: " + paramsExpr);
+
 
         // Vérification du nombre de paramètres
         if (paramsExpr.size() != expectedParams.size()) {
@@ -485,10 +618,10 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             Type paramType = visit(paramsExpr.get(i)); // Obtention du type du paramètre fourni
             Type expectedType = functionType.getArgsType(i);
 
-            System.out.println("Expected parameter " + (i + 1) + " type: " + expectedType + ", Provided type: " + paramType);
+
 
             if (expectedType instanceof UnknownType) {
-                System.out.println("Unifying parameter " + (i + 1) + " with actual type: " + paramType);
+
                 Map<UnknownType, Type> unification = ((UnknownType) expectedType).unify(paramType);
 
                 for (Map.Entry<UnknownType, Type> entry : unification.entrySet()) {
@@ -501,26 +634,33 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             }
 
             // Vérification après unification
-            System.out.println("Updated expected type: " + expectedType);
+
             if (!expectedType.equals(paramType)) {
                 throw new IllegalArgumentException("Type mismatch for parameter " + (i + 1) + " in function call '" + functionName +
                         "'. Expected: " + expectedType + ", Provided: " + paramType);
             }
         }
 
-        System.out.println("Function call '" + functionName + "' is valid.");
+
         return returnType; // Retourne le type de retour de la fonction
     }
 
 
+    /**
+     * Retourne toujours un type BOOL pour un littéral booléen.
+     */
     @Override
     public Type visitBoolean(grammarTCLParser.BooleanContext ctx) {
         return new PrimitiveType(Type.Base.BOOL);
     }
 
+    /**
+     * Vérifie que les deux membres (gauche et droite) sont des bool, retourne un bool.
+     * Même logique que pour OR.
+     */
     @Override
     public Type visitAnd(grammarTCLParser.AndContext ctx) { // se comporte comme un OR
-        System.out.println("visitAnd");
+
 
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
@@ -546,11 +686,15 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return new PrimitiveType(Type.Base.BOOL);
     }
 
+    /**
+     * Visite une variable, retourne son type si elle a déjà été déclarée,
+     * sinon lève une exception.
+     */
     @Override
     public Type visitVariable(grammarTCLParser.VariableContext ctx) {
         // Récupère le nom de la variable depuis le contexte
         String variableName = ctx.VAR().getText();
-        System.out.println("Recherche de la variable par nom : " + variableName);
+
 
         // Utilise existsInAllScopes pour chercher la variable
         Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
@@ -564,26 +708,28 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         Type declaredType = foundEntry.getValue();
 
         // Affiche les informations trouvées
-        System.out.println("Clé trouvée : " + declaredKey);
-        System.out.println("Type associé : " + declaredType);
+
+
 
         // Retourne le type trouvé ou la clé si le type est null
         return declaredType != null ? declaredType : declaredKey;
     }
 
+    /**
+     * Vérifie que l'opération de multiplication est faite entre deux int,
+     * sinon lève une exception.
+     * Retourne un int si tout va bien.
+     */
     @Override
     public Type visitMultiplication(grammarTCLParser.MultiplicationContext ctx) {
-        System.out.println("Visite Multiplication");
+
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
         String left_string = ctx.expr(0).getText();
         String right_string = ctx.expr(1).getText();
 
         // Unifie les types des membres gauche et droit avec INT si nécessaire
-        System.out.println("right_type :  " + right_type);
-        if (right_type instanceof UnknownType) {
-            System.out.println("bool instance de unknownType");
-        }
+
         unifyToInt(left_string, left_type);
         unifyToInt(right_string, right_type);
 
@@ -601,24 +747,28 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new UnsupportedOperationException("vous Multiplier des expr de différents type");
         }
         if (left_type.equals(new PrimitiveType(Type.Base.INT))) {
-            System.out.println("Multiplication réussie entre deux INT.");
+
             return new PrimitiveType(Type.Base.INT);
         } else {
             throw new UnsupportedOperationException("La Multiplication est uniquement supportée pour des types INT.");
         }
     }
 
+    /**
+     * Vérifie que les deux membres (gauche et droite) de l'égalité
+     * sont du même type. Retourne un bool.
+     */
     @Override
     public Type visitEquality(grammarTCLParser.EqualityContext ctx) { //l'unification fonctionne comme l'assignement
-        System.out.println("visitEquality");
+
         String left_string = ctx.expr(0).getText();
         String right_string = ctx.expr(1).getText();
-        System.out.println("Déclaration gauche : " + left_string);
-        System.out.println("Déclaration droite : " + right_string);
+
+
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
-        System.out.println("type gauche trouvée : " + left_type);
-        System.out.println("type droit trouvée : " + right_type);
+
+
         if (left_type instanceof UnknownType) {
             // Recherche de la variable dans tous les scopes
             Map.Entry<UnknownType, Type> leftEntry = existsInAllScopes(left_string);
@@ -651,17 +801,21 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return new PrimitiveType(Type.Base.BOOL);
     }
 
+    /**
+     * Vérifie que tous les éléments sont du même type, puis
+     * retourne un ArrayType de ce type.
+     */
     @Override
     public Type visitTab_initialization(grammarTCLParser.Tab_initializationContext ctx) {
-        System.out.println("visitTab_initialization");
+
         String variableName = ctx.expr(0).getText();
-        System.out.println(variableName);
+
         Type previous_type = visit(ctx.expr(0));
         for (var expr : ctx.expr()) { // on parcourt la liste et on compare chaque type de nombre entre eux.
-            System.out.println("Visite de l'expression : " + expr.getText());
+
             Type type_valeurs = visit(expr);
-            System.out.println("type_valeurs : " + type_valeurs);
-            System.out.println(type_valeurs);
+
+
             if (!previous_type.equals(type_valeurs)) {
                 throw new UnsupportedOperationException("Votre tableau a différents types");
             }
@@ -670,19 +824,18 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return Array_type; // si la visite s'est bien passé alors tous les elements du tab sont du même type que le premier
     }
 
+    /**
+     * Vérifie que l'addition est faite entre deux int,
+     * sinon lève une exception. Retourne un int si OK.
+     */
     @Override
     public Type visitAddition(grammarTCLParser.AdditionContext ctx) {
-        System.out.println("Visite addition");
         Type left_type = visit(ctx.expr(0));
         Type right_type = visit(ctx.expr(1));
         String left_string = ctx.expr(0).getText();
         String right_string = ctx.expr(1).getText();
 
         // Unifie les types des membres gauche et droit avec INT si nécessaire
-        System.out.println("right_type :  " + right_type);
-        if (right_type instanceof UnknownType) {
-            System.out.println("bool instance de unknownType");
-        }
         unifyToInt(left_string, left_type);
         unifyToInt(right_string, right_type);
 
@@ -700,7 +853,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new UnsupportedOperationException("vous additionner des expr de différents type");
         }
         if (left_type.equals(new PrimitiveType(Type.Base.INT))) {
-            System.out.println("Addition réussie entre deux INT.");
+
             return new PrimitiveType(Type.Base.INT);
         } else {
             throw new UnsupportedOperationException("L'addition est uniquement supportée pour des types INT.");
@@ -708,6 +861,10 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
     }
 
+    /**
+     * Retourne un type de base (int, bool, auto) en fonction du contenu
+     * du contexte. Lance une exception si le type est inconnu.
+     */
     @Override
     public Type visitBase_type(grammarTCLParser.Base_typeContext ctx) {
         // Récupère le texte du type de base
@@ -727,21 +884,29 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     }
 
 
+    /**
+     * Retourne un ArrayType dont le contenu est le type retourné par {@link #visitBase_type}
+     * ou un autre type (si c'est un tableau de tableau, etc.).
+     */
     @Override
     public Type visitTab_type(grammarTCLParser.Tab_typeContext ctx) {
-        System.out.println("visitTab_type");
+
         String left_string = ctx.type().getText();
-        System.out.println(left_string);
+
         Type tab_type = visit(ctx.type());
         Type Array_type = new ArrayType(tab_type);
         return Array_type;
     }
 
+    /**
+     * Visite une déclaration de variable (type + nom). Si une initialisation
+     * est présente, on appelle visitAssignment pour gérer l'affectation.
+     */
     @Override
     public Type visitDeclaration(grammarTCLParser.DeclarationContext ctx) {
         String variableName = ctx.VAR().getText();
         UnknownType variable = new UnknownType(ctx.VAR());
-        System.out.println("Déclaration trouvée : " + variable);
+
 
         // Récupère le scope actuel (le sommet de la pile)
         Map<UnknownType, Type> currentScope = typeScopes.peek();
@@ -751,16 +916,12 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new IllegalArgumentException("Variable déjà déclarée dans ce bloc : " + variableName);
         }
 
-        if (VarExistsInParentScopes(variableName)) {
-            System.out.println("Une variable avec ce nom existe dans un scope parent : " + variableName);
-        }
-
         // Ajout de la déclaration au scope courant
         Type declaredType = visit(ctx.type());
         addVariableToScope(variable, declaredType, currentScope);
         // Si une initialisation est présente, visite l'expression assignée
         if (ctx.expr() != null) {
-            System.out.println("Expression d'initialisation trouvée pour " + variableName + ": " + ctx.expr().getText());
+
             //Type expressionType = visit(ctx.expr());
 
 
@@ -780,28 +941,31 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             }
         }
         // Affiche l'état actuel de la pile des scopes
-        System.out.println("État de la pile des scopes après la déclaration :");
-        for (int i = typeScopes.size() - 1; i >= 0; i--) {
-            System.out.println("Scope " + i + " : " + typeScopes.get(i));
-        }
 
         return declaredType;
     }
 
+    /**
+     * Visite l'instruction print, vérifie que la variable est déclarée.
+     */
     @Override
     public Type visitPrint(grammarTCLParser.PrintContext ctx) { // vérifié que la variable a été déclaré (donc parcourir le scope)
-        System.out.println("VisitPrint");
+
         String variableName = ctx.VAR().getText();
-        System.out.println("variableName : " + variableName);
+
         if(existsInAllScopes(variableName)==null){
             throw new UnsupportedOperationException("Variable '" + variableName + "' has not been declared.");
         };
         return null;
     }
 
+    /**
+     * Gère l'affectation d'une variable (membre gauche) avec une expression (membre droit).
+     * Vérifie la cohérence des types, puis propage l'unification si nécessaire.
+     */
     @Override
     public Type visitAssignment(grammarTCLParser.AssignmentContext ctx) {
-        System.out.println("Visite assignement");
+
 
         String variableName = ctx.VAR().getText();
         Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
@@ -816,11 +980,11 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
         // Vérification si le type droit est un UnknownType et unification correcte
         if (declaredType instanceof UnknownType && rightType instanceof PrimitiveType) {
-            System.out.println("Unification forcée : " + declaredKey + " -> " + rightType);
+
             propagateType(declaredKey, rightType);
             declaredType = rightType;
         } else if (declaredType instanceof PrimitiveType && rightType instanceof UnknownType) {
-            System.out.println("Unification forcée : " + rightType + " -> " + declaredType);
+
             propagateType((UnknownType) rightType, declaredType);
             rightType = declaredType;
         }
@@ -836,46 +1000,49 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         // Lien entre deux `UnknownType`
         linkUnknownTypes(declaredKey, declaredType, rightExpr.getText(), rightType);
 
-        System.out.println("Assignation réussie pour la variable " + variableName);
+
         return declaredType;
     }
 
-
-
-
+    /**
+     * Visite un bloc de code : crée un nouveau scope, visite chaque instruction,
+     * puis archive le scope une fois terminé.
+     */
     @Override
     public Type visitBlock(grammarTCLParser.BlockContext ctx) {
-        System.out.println("Visite d'un bloc : " + ctx.getText());
+
 
         // Ajouter un nouveau scope à la pile
         typeScopes.push(new HashMap<>());
-        System.out.println("Entrée dans un nouveau bloc. Pile actuelle : " + typeScopes);
+
 
         try {
             // Visite des instructions à l'intérieur du bloc
             for (var instr : ctx.instr()) {
-                System.out.println("Visite de l'instruction : " + instr.getText());
+
                 visit(instr);
             }
         } finally {
             // Archiver le scope courant avant de le supprimer
             Map<UnknownType, Type> exitingScope = typeScopes.pop();
             archivedScopes.push(exitingScope);
-            System.out.println("Sortie du bloc. Scope archivé : " + exitingScope);
-            System.out.println("Pile actuelle après sortie : " + typeScopes);
+
+
         }
 
         return null; // Un bloc ne retourne pas de type spécifique
     }
 
-
-
+    /**
+     * Visite un if : vérifie que la condition est un bool,
+     * visite ensuite le bloc "then" et éventuellement le bloc "else".
+     */
     @Override
     public Type visitIf(grammarTCLParser.IfContext ctx) { // on peut inférer que le auto est un bool
-        System.out.println("Visite d'un IF.");
+
 
         // Visite et vérifie le type de la condition
-        System.out.println("Visite de la condition de l'IF : " + ctx.expr().getText());
+
         String condition_name = ctx.expr().getText();
         Type conditionType = visit(ctx.expr());
         if (conditionType instanceof UnknownType) {
@@ -890,26 +1057,29 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new IllegalArgumentException("La condition de l'IF doit être de type BOOL. Trouvé : " + conditionType);
         }
 
-        System.out.println("Condition de l'IF validée : " + conditionType);
+
 
         // Visite le bloc d'instructions du IF
-        System.out.println("Visite du bloc THEN.");
+
         visit(ctx.instr(0)); // Premier bloc d'instructions après la condition
 
         // Visite le bloc ELSE s'il existe
         if (ctx.ELSE() != null) {
-            System.out.println("Visite du bloc ELSE.");
+
             visit(ctx.instr(1)); // Deuxième bloc d'instructions (bloc ELSE)
         }
 
-        System.out.println("Fin de la visite du IF.");
+
         return null; // Le IF ne retourne pas de type particulier
     }
 
-
+    /**
+     * Visite un while : vérifie que la condition est de type bool,
+     * puis visite l'instruction à l'intérieur de la boucle.
+     */
     @Override
     public Type visitWhile(grammarTCLParser.WhileContext ctx) { //semblable au VisitIf
-        System.out.println("visitWhile");
+
         Type conditionType = visit(ctx.expr());
         // La condition doit être de type BOOL
         if (!conditionType.equals(new PrimitiveType(Type.Base.BOOL))) {// il faut vérifier que l'expr est un bool
@@ -919,9 +1089,13 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return null; // le while ne retourne rien
     }
 
+    /**
+     * Visite un for : vérifie la condition (doit être bool),
+     * et visite les 3 instructions (initialisation, incrémentation, et le corps).
+     */
     @Override
     public Type visitFor(grammarTCLParser.ForContext ctx) { //selon la grammaire : 3 instr et 1 expr, on va ts les visiter et faire comme dans visitWhile et VisitIf
-        System.out.println("visitFor"); //il faut s'assure que l'expr est un bool et visiter l'instruction pour typer
+
         visit(ctx.instr(0));
         String condition_name = ctx.expr().getText(); //comme dans l'inférence de la condition avec le if
         Type conditionType = visit(ctx.expr());
@@ -941,33 +1115,35 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return null; // comme visitIf et VisitWhile
     }
 
+    /**
+     * Visite un return : capture le type de l'expression retournée.
+     *
+     * @return le type de l'expression retournée
+     */
     @Override
     public Type visitReturn(grammarTCLParser.ReturnContext ctx) {
-        System.out.println("Visite de l'instruction RETURN");
-        System.out.println("Expression retournée : " + ctx.expr().getText());
-        System.out.println("Table des types avant la visite de l'expression : " + types);
-
-        // Récupère le type de l'expression retournée
-        Type returnType = visit(ctx.expr());
-
-        System.out.println("Type de retour déterminé : " + returnType);
-        return returnType; // Retourne le type
+        return visit(ctx.expr()); // Retourne le type
     }
 
-
+    /**
+     * Visite le corps d'une fonction (core_fct),
+     * c'est-à-dire les instructions suivies éventuellement d'un return.
+     *
+     * @return le type de retour si un return est présent, sinon null
+     */
     @Override
     public Type visitCore_fct(grammarTCLParser.Core_fctContext ctx) {
-        System.out.println("Visite de core_fct");
+
 
         // Parcourt et visite toutes les instructions
         for (var instr : ctx.instr()) {
-            System.out.println("Visite d'une instruction : " + instr.getText());
+
             visit(instr); // Visite chaque instruction (y compris les déclarations)
         }
 
         // Visite l'expression de retour si elle existe
         if (ctx.RETURN() != null) {
-            System.out.println("Visite de l'expression de retour : " + ctx.expr().getText());
+
 
             // Récupère le type de retour
             grammarTCLParser.ExprContext test = ctx.expr();
@@ -977,9 +1153,6 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             if (!typeScopes.isEmpty()) {
                 Map<UnknownType, Type> currentScope = new HashMap<>(typeScopes.peek());
                 archivedScopes.push(currentScope);
-                System.out.println("Scope actuel ajouté à l'archive au moment du RETURN : " + currentScope);
-            } else {
-                System.out.println("Aucun scope à archiver.");
             }
 
             return returnType; // Retourne le type de retour
@@ -988,16 +1161,20 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         return null; // Retourne null si aucune expression RETURN n'est présente
     }
 
-
-
+    /**
+     * Visite la déclaration d'une fonction,
+     * y compris la création d'un scope pour ses paramètres et son corps.
+     *
+     * @return le FunctionType correspondant à la fonction.
+     */
     @Override
     public Type visitDecl_fct(grammarTCLParser.Decl_fctContext ctx) {
-        System.out.println("Visite d'une déclaration de fonction.");
+
 
         // Récupération du type de retour et du nom de la fonction
         Type returnType = visit(ctx.type(0));
         String functionName = ctx.VAR(0).getText();
-        System.out.println("Nom de la fonction : " + functionName);
+
 
         // Analyse des paramètres
         ArrayList<Type> parametersType = new ArrayList<>();
@@ -1025,7 +1202,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
         if (newScopeCreated) {
             typeScopes.push(new HashMap<>());
-            System.out.println("Entrée dans le scope local de la fonction : " + functionName);
+
         }
 
         // Déclaration des paramètres dans le scope local
@@ -1044,7 +1221,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
         // Si le type de retour est `auto`, il doit être remplacé par le type réellement retourné
         if (returnType instanceof UnknownType) {
-            System.out.println("Type de retour 'auto' détecté. Inférence du type en cours...");
+
 
             // Unification avec le type réellement retourné
             Map<UnknownType, Type> unification = ((UnknownType) returnType).unify(coreReturnType);
@@ -1054,19 +1231,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
             // Mise à jour du type de retour
             returnType = find((UnknownType) returnType);
-            System.out.println("Type de retour inféré après `find()`: " + returnType);
+
         }
 
         // FORCER L'UNIFICATION DU TYPE DE RETOUR
         if (returnType instanceof UnknownType && coreReturnType instanceof PrimitiveType) {
-            System.out.println("Forçage du type de retour : " + returnType + " -> " + coreReturnType);
+
             propagateType((UnknownType) returnType, coreReturnType);
             returnType = coreReturnType;
         }
 
         // Si le type de retour est un `UnknownType`, on essaie de l'unifier avec le type retourné
         if (returnType instanceof UnknownType) {
-            System.out.println("Forçage de l'unification du type de retour de la fonction " + functionName);
+
             union((UnknownType) returnType, (UnknownType) coreReturnType);
             returnType = find((UnknownType) returnType); // Mise à jour avec la racine unifiée
             coreReturnType = find((UnknownType) coreReturnType);
@@ -1086,33 +1263,31 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         // Archivage du scope seulement si créé
         if (newScopeCreated) {
             Map<UnknownType, Type> localScope = typeScopes.pop();
-            System.out.println("Scope local archivé pour la fonction : " + functionName);
+
         }
 
         return functionType;
     }
 
-
-
+    /**
+     * Visite le noeud principal (main) : parcourt les fonctions déclarées,
+     * puis le corps principal s'il existe.
+     */
     @Override
     public Type visitMain(grammarTCLParser.MainContext ctx) {
-        System.out.println("Visite de Main");
+
 
         // Parcourt les déclarations de fonctions
         for (var declFct : ctx.decl_fct()) {
-            System.out.println("Visite de la déclaration de fonction : " + declFct.getText());
+
             visit(declFct);
         }
 
         // Visite le cœur de la fonction principale
         if (ctx.core_fct() != null) {
-            System.out.println("Visite du corps de la fonction principale (core_fct)");
+
             visit(ctx.core_fct());
         }
-
         return null;
     }
-
-
-
 }
