@@ -53,7 +53,6 @@ public class FunctionType extends Type {
 
     @Override
     public Map<UnknownType, Type> unify(Type t) {
-        // Vérifie si `t` est un FunctionType
         if (!(t instanceof FunctionType)) {
             throw new IllegalArgumentException("Unification échouée : incompatible entre FunctionType et " + t);
         }
@@ -61,29 +60,30 @@ public class FunctionType extends Type {
         FunctionType other = (FunctionType) t;
         Map<UnknownType, Type> substitutions = new java.util.HashMap<>();
 
-        // Vérifie que le nombre d'arguments est identique
+        // Vérification du nombre d'arguments
         if (this.getNbArgs() != other.getNbArgs()) {
             throw new IllegalArgumentException("Unification échouée : le nombre d'arguments est différent.");
         }
 
-        // Unifie les types des arguments
+        // Unification des paramètres
         for (int i = 0; i < this.getNbArgs(); i++) {
             Map<UnknownType, Type> argSubstitutions = this.getArgsType(i).unify(other.getArgsType(i));
-            if (argSubstitutions == null) {
-                throw new IllegalArgumentException("Unification échouée : les arguments " + i + " ne peuvent pas être unifiés.");
-            }
             substitutions.putAll(argSubstitutions);
         }
 
-        // Unifie les types de retour
+        // Unification du retour
         Map<UnknownType, Type> returnSubstitutions = this.returnType.unify(other.returnType);
-        if (returnSubstitutions == null) {
-            throw new IllegalArgumentException("Unification échouée : les types de retour sont incompatibles.");
-        }
         substitutions.putAll(returnSubstitutions);
+
+        // Application des substitutions pour mettre à jour immédiatement
+        this.returnType = this.returnType.substituteAll(substitutions);
+        for (int i = 0; i < argsTypes.size(); i++) {
+            argsTypes.set(i, argsTypes.get(i).substituteAll(substitutions));
+        }
 
         return substitutions;
     }
+
 
 
     @Override

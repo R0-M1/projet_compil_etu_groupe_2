@@ -26,6 +26,7 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         typeScopes.push(new HashMap<>()); // Scope global
         archivedScopes.push(new HashMap<>()); // Scope global
     }
+
     private UnknownType find(UnknownType type) {
         if (!autoLinkMap.containsKey(type)) {
             return type; // Si aucun lien, retourne lui-même (racine de son propre groupe)
@@ -76,19 +77,31 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     private void propagateType(UnknownType type, Type realType) {
         // Trouve la racine canonique
         UnknownType root = find(type);
-        System.out.println("propagate type");
-        // Parcourt toutes les variables liées à cette racine
-        for (Map.Entry<UnknownType, UnknownType> entry : autoLinkMap.entrySet()) {
-            System.out.println("entry :" + entry.getKey() + " " + entry.getValue());
+        System.out.println("Propagating type for root: " + root + " -> " + realType);
+
+        // Mise à jour dans tous les scopes ET dans la table de types globale
+        for (Map.Entry<UnknownType, Type> entry : types.entrySet()) {
             if (find(entry.getKey()).equals(root)) {
-                // Met à jour le type dans tous les scopes concernés
                 applySubstitutionToScope(entry.getKey(), realType);
+                types.put(entry.getKey(), realType);
             }
         }
 
-        // Met également à jour la racine elle-même
+        // S'assurer que tous les types liés sont mis à jour
+        for (Map.Entry<UnknownType, UnknownType> entry : autoLinkMap.entrySet()) {
+            if (find(entry.getKey()).equals(root)) {
+                applySubstitutionToScope(entry.getKey(), realType);
+                types.put(entry.getKey(), realType);
+            }
+        }
+
+        // Mise à jour de la racine
         applySubstitutionToScope(root, realType);
+        types.put(root, realType);
+
+        System.out.println("Final propagation complete.");
     }
+
     /**
      * Unifie un UnknownType avec le type INT et propage les changements dans tous les scopes.
      *
@@ -96,29 +109,19 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
      * @param variableType Type actuel de la variable.
      */
     private void unifyToInt(String variableName, Type variableType) {
-
-        // Vérifie si le type est un UnknownType
         if (variableType instanceof UnknownType) {
-            System.out.println("Unify to int called " + variableName);
-            // Recherche la clé de la variable dans tous les scopes
+            System.out.println("Unify to int called for " + variableName);
             Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
             if (foundEntry == null) {
                 throw new IllegalArgumentException("Variable non déclarée : " + variableName);
             }
 
             UnknownType key = foundEntry.getKey();
-            System.out.println("Unification de " + variableName + " (clé : " + key + ") avec INT.");
-
-            // Effectue l'unification avec INT
-            Map<UnknownType, Type> unification = key.unify(new PrimitiveType(Type.Base.INT));
-            System.out.println("Résultat de l'unification : " + unification);
-
-            // Propage les changements
-            for (Map.Entry<UnknownType, Type> entry : unification.entrySet()) {
-                propagateType(entry.getKey(), entry.getValue());
-            }
+            System.out.println("Unification forcée de " + key + " avec INT.");
+            propagateType(key, new PrimitiveType(Type.Base.INT));
         }
     }
+
     /**
      * Unifie un UnknownType avec le type BOOL et propage les changements dans tous les scopes.
      *
@@ -444,14 +447,14 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
     public Type visitCall(grammarTCLParser.CallContext ctx) {
         System.out.println("visitCall");
 
-        // Retrieve the function name
+        // Récupération du nom de la fonction
         String functionName = ctx.VAR().getText();
         if (functionName == null) {
             throw new IllegalArgumentException("Function name cannot be null.");
         }
         System.out.println("Function name: " + functionName);
 
-        // Find the function type
+        // Recherche du type de la fonction
         FunctionType functionType = findFunctionType(functionName);
         if (functionType == null) {
             throw new UnsupportedOperationException("Function '" + functionName + "' does not exist in the current or parent scopes");
@@ -459,39 +462,54 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
         System.out.println("Function type: " + functionType);
 
-        // Get the return type and expected parameters of the function
+        // Récupération du type de retour et des paramètres attendus
         Type returnType = functionType.getReturnType();
         List<Type> expectedParams = functionType.getArgsTypes();
         System.out.println("Expected parameters: " + expectedParams);
 
-        // Validate provided parameters
+        // Vérification des paramètres fournis
         List<grammarTCLParser.ExprContext> paramsExpr = ctx.expr();
         if (paramsExpr == null) {
-            paramsExpr = new ArrayList<>(); // Handle null case with an empty list
+            paramsExpr = new ArrayList<>();
         }
         System.out.println("Provided parameters: " + paramsExpr);
 
-        // Check parameter count
+        // Vérification du nombre de paramètres
         if (paramsExpr.size() != expectedParams.size()) {
             throw new IllegalArgumentException("Function call '" + functionName + "' has mismatched parameter count. Expected: " +
                     expectedParams.size() + ", Provided: " + paramsExpr.size());
         }
 
-        // Validate parameter types
+        // Validation et unification des types des paramètres
         for (int i = 0; i < paramsExpr.size(); i++) {
-            Type paramType = visit(paramsExpr.get(i)); // Get type of the provided parameter
+            Type paramType = visit(paramsExpr.get(i)); // Obtention du type du paramètre fourni
             Type expectedType = functionType.getArgsType(i);
 
             System.out.println("Expected parameter " + (i + 1) + " type: " + expectedType + ", Provided type: " + paramType);
 
-            if (!paramType.equals(expectedType)) {
+            if (expectedType instanceof UnknownType) {
+                System.out.println("Unifying parameter " + (i + 1) + " with actual type: " + paramType);
+                Map<UnknownType, Type> unification = ((UnknownType) expectedType).unify(paramType);
+
+                for (Map.Entry<UnknownType, Type> entry : unification.entrySet()) {
+                    propagateType(entry.getKey(), entry.getValue());
+                }
+
+                // Force la mise à jour immédiate de expectedType
+                expectedType = expectedType.substituteAll(unification);
+                functionType.getArgsTypes().set(i, expectedType);
+            }
+
+            // Vérification après unification
+            System.out.println("Updated expected type: " + expectedType);
+            if (!expectedType.equals(paramType)) {
                 throw new IllegalArgumentException("Type mismatch for parameter " + (i + 1) + " in function call '" + functionName +
                         "'. Expected: " + expectedType + ", Provided: " + paramType);
             }
         }
 
         System.out.println("Function call '" + functionName + "' is valid.");
-        return returnType; // Return the function's return type
+        return returnType; // Retourne le type de retour de la fonction
     }
 
 
@@ -783,23 +801,9 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
     @Override
     public Type visitAssignment(grammarTCLParser.AssignmentContext ctx) {
-        if(ctx.expr(1)!=null){
-            System.out.println("test");
-        }
         System.out.println("Visite assignement");
 
-
-        TerminalNode test2 = ctx.VAR();
-        TerminalNode test3 = ctx.ASSIGN();
-
-        List<grammarTCLParser.ExprContext> test = ctx.expr();
-
-
-
-
-
         String variableName = ctx.VAR().getText();
-        // Extrait le type déclaré pour la variable (membre gauche)
         Map.Entry<UnknownType, Type> foundEntry = existsInAllScopes(variableName);
         if (foundEntry == null) {
             throw new IllegalArgumentException("Variable non déclarée : " + variableName);
@@ -807,11 +811,20 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
         UnknownType declaredKey = foundEntry.getKey();
         Type declaredType = foundEntry.getValue();
 
-        // Vérifie le type de l'expression assignée (membre droit)
         grammarTCLParser.ExprContext rightExpr = ctx.expr(0);
         Type rightType = visit(rightExpr);
 
-        // Si les deux types sont connus (pas UnknownType) et différents => erreur
+        // Vérification si le type droit est un UnknownType et unification correcte
+        if (declaredType instanceof UnknownType && rightType instanceof PrimitiveType) {
+            System.out.println("Unification forcée : " + declaredKey + " -> " + rightType);
+            propagateType(declaredKey, rightType);
+            declaredType = rightType;
+        } else if (declaredType instanceof PrimitiveType && rightType instanceof UnknownType) {
+            System.out.println("Unification forcée : " + rightType + " -> " + declaredType);
+            propagateType((UnknownType) rightType, declaredType);
+            rightType = declaredType;
+        }
+
         if (!(declaredType instanceof UnknownType) && !(rightType instanceof UnknownType)) {
             if (!declaredType.equals(rightType)) {
                 throw new IllegalArgumentException(
@@ -820,28 +833,13 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             }
         }
 
-        // Logique d’unification ou de liaison pour les UnknownType
+        // Lien entre deux `UnknownType`
         linkUnknownTypes(declaredKey, declaredType, rightExpr.getText(), rightType);
 
-        // Vérifie la compatibilité tableau vs. primitif
-        if ((declaredType instanceof ArrayType && !(rightType instanceof ArrayType)) ||
-                (!(declaredType instanceof ArrayType) && rightType instanceof ArrayType)) {
-            throw new IllegalArgumentException(
-                    "Incompatible types: Cannot assign an array to a primitive type or vice versa."
-            );
-        }
-
-        // Unifie si le type de gauche ou de droite est UnknownType
-        Map<UnknownType, Type> unification = declaredKey.unify(rightType);
-        if (!unification.isEmpty()) {
-            for (Map.Entry<UnknownType, Type> substitution : unification.entrySet()) {
-                propagateType(substitution.getKey(), substitution.getValue());
-            }
-        }
-
         System.out.println("Assignation réussie pour la variable " + variableName);
-        return declaredType; // Retourne le type après assignation
+        return declaredType;
     }
+
 
 
 
@@ -1003,15 +1001,14 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
 
         // Analyse des paramètres
         ArrayList<Type> parametersType = new ArrayList<>();
-
         if (ctx.type().size() > 1) {
             for (int i = 1; i < ctx.type().size(); i++) {
                 parametersType.add(visit(ctx.type(i)));
             }
         }
 
+        // Création de l'objet représentant la fonction
         FunctionType functionType = new FunctionType(returnType, parametersType);
-
 
         // Vérifie si la fonction existe déjà dans le scope actuel
         Map<UnknownType, Type> currentScope = typeScopes.peek();
@@ -1019,34 +1016,63 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             throw new UnsupportedOperationException("La fonction " + functionName + " est déjà déclarée.");
         }
 
-
-        // Ajoute la fonction au scope global
+        // Ajoute la fonction à la table des types globale
         UnknownType functionKey = new UnknownType(ctx.VAR(0));
         addVariableToScope(functionKey, functionType, currentScope);
 
-        // Création d'un scope temporaire pour les variables locales de la fonction
-        typeScopes.push(new HashMap<>());
-        System.out.println("Entrée dans le scope local de la fonction : " + functionName);
+        // **Vérifier si un scope local existe déjà**
+        boolean newScopeCreated = typeScopes.size() == 1; // On est dans le scope global
 
-        for(int i=1; i<ctx.type().size(); i++){
-            grammarTCLParser.InstrContext test = new grammarTCLParser.InstrContext();
-            grammarTCLParser.DeclarationContext declarationCtx = new grammarTCLParser.DeclarationContext(test);
-            declarationCtx.children = new ArrayList<>(); // Initialise manuellement les enfants
+        if (newScopeCreated) {
+            typeScopes.push(new HashMap<>());
+            System.out.println("Entrée dans le scope local de la fonction : " + functionName);
+        }
+
+        // Déclaration des paramètres dans le scope local
+        for (int i = 1; i < ctx.type().size(); i++) {
+            grammarTCLParser.InstrContext instrCtx = new grammarTCLParser.InstrContext();
+            grammarTCLParser.DeclarationContext declarationCtx = new grammarTCLParser.DeclarationContext(instrCtx);
+            declarationCtx.children = new ArrayList<>();
             declarationCtx.addChild(ctx.type(i));
             declarationCtx.addChild(ctx.VAR(i));
 
             visitDeclaration(declarationCtx);
         }
 
-
-
-
-        // Visite du core de la fonction
+        // Visite du corps de la fonction
         Type coreReturnType = visit(ctx.core_fct());
 
+        // Si le type de retour est `auto`, il doit être remplacé par le type réellement retourné
+        if (returnType instanceof UnknownType) {
+            System.out.println("Type de retour 'auto' détecté. Inférence du type en cours...");
 
-        returnType.unify(coreReturnType);
-        // Vérification du type de retour
+            // Unification avec le type réellement retourné
+            Map<UnknownType, Type> unification = ((UnknownType) returnType).unify(coreReturnType);
+            for (Map.Entry<UnknownType, Type> entry : unification.entrySet()) {
+                propagateType(entry.getKey(), entry.getValue());
+            }
+
+            // Mise à jour du type de retour
+            returnType = find((UnknownType) returnType);
+            System.out.println("Type de retour inféré après `find()`: " + returnType);
+        }
+
+        // FORCER L'UNIFICATION DU TYPE DE RETOUR
+        if (returnType instanceof UnknownType && coreReturnType instanceof PrimitiveType) {
+            System.out.println("Forçage du type de retour : " + returnType + " -> " + coreReturnType);
+            propagateType((UnknownType) returnType, coreReturnType);
+            returnType = coreReturnType;
+        }
+
+        // Si le type de retour est un `UnknownType`, on essaie de l'unifier avec le type retourné
+        if (returnType instanceof UnknownType) {
+            System.out.println("Forçage de l'unification du type de retour de la fonction " + functionName);
+            union((UnknownType) returnType, (UnknownType) coreReturnType);
+            returnType = find((UnknownType) returnType); // Mise à jour avec la racine unifiée
+            coreReturnType = find((UnknownType) coreReturnType);
+        }
+
+        // Vérification après unification
         if (!coreReturnType.equals(returnType)) {
             throw new IllegalArgumentException(
                     "Type de retour incompatible pour la fonction '" + functionName +
@@ -1054,9 +1080,14 @@ public class TyperVisitor extends AbstractParseTreeVisitor<Type> implements gram
             );
         }
 
-        // Archiver le scope local de la fonction
-        Map<UnknownType, Type> localScope = typeScopes.pop();
-        System.out.println("Scope local archivé pour la fonction : " + functionName);
+        // Mise à jour de la déclaration de la fonction avec le type correct
+        currentScope.put(functionKey, new FunctionType(returnType, parametersType));
+
+        // Archivage du scope seulement si créé
+        if (newScopeCreated) {
+            Map<UnknownType, Type> localScope = typeScopes.pop();
+            System.out.println("Scope local archivé pour la fonction : " + functionName);
+        }
 
         return functionType;
     }
